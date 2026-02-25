@@ -3,7 +3,7 @@ services:
     name: clube-beneficios-web
     env: python
     plan: free
-    # O buildCommand foi atualizado para instalar, preparar estáticos, migrar o banco e criar o admin
+    # Esta linha é vital: instala, limpa estáticos, migra o banco e corre o script de admin
     buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate && python create_admin.py"
     startCommand: "gunicorn clube.wsgi:application"
     envVars:
