@@ -48,7 +48,7 @@ ROOT_URLCONF = "clube.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "templates"],
+        "DIRS": [BASE_DIR / "templates"], # O Django buscará o index.html aqui
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
