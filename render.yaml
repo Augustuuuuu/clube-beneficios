@@ -3,8 +3,8 @@ services:
     name: clube-beneficios-web
     env: python
     plan: free
-    # Alterado para rodar migrações e coletar estáticos automaticamente
-    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
+    # Trecho do arquivo render.yaml
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate && python create_admin.py"
     startCommand: "gunicorn clube.wsgi:application"
     envVars:
       - key: DJANGO_SETTINGS_MODULE
