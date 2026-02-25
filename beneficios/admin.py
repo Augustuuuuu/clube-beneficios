@@ -27,7 +27,7 @@ class OfferAdmin(admin.ModelAdmin):
         "end_at",
         "tag",
     )
-    # list_filter = ("enabled", "partner")
+    list_filter = ("enabled", "partner")
     search_fields = ("title", "description", "tag")
 
 
