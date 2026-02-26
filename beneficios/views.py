@@ -304,3 +304,64 @@ def api_redeem(request):
         "offer_title": red.offer_title_snapshot,
         "reused": False,
     })
+
+
+@require_http_methods(["GET"])
+@ensure_csrf_cookie
+def api_redemptions(request):
+    """Lista resgates (registros) para o painel admin/gerente."""
+    q = (request.GET.get("q") or "").strip().lower()
+
+    try:
+        page = int(request.GET.get("page") or 0)
+    except (TypeError, ValueError):
+        page = 0
+
+    try:
+        page_size = int(request.GET.get("page_size") or 50)
+    except (TypeError, ValueError):
+        page_size = 50
+
+    page = max(0, page)
+    page_size = max(1, min(page_size, 500))
+
+    qs = models.Redemption.objects.select_related("member", "offer").order_by("-created_at")
+
+    if q:
+        from django.db.models import Q
+
+        qs = qs.filter(
+            Q(member__full_name__icontains=q)
+            | Q(member__whatsapp_e164__icontains=q)
+            | Q(code__icontains=q)
+            | Q(offer_title_snapshot__icontains=q)
+            | Q(offer__title__icontains=q)
+        )
+
+    total = qs.count()
+    start = page * page_size
+    redemptions = list(qs[start : start + page_size])
+
+    def _serialize_redemption(r: models.Redemption) -> dict:
+        offer_title = r.offer_title_snapshot or (r.offer.title if r.offer_id else "")
+        tag = r.tag_snapshot or (r.offer.tag if r.offer_id else "OFERTA")
+        phone = r.phone_snapshot or r.member.whatsapp_e164
+
+        return {
+            "id": r.pk,
+            "name": r.member.full_name,
+            "phone": phone,
+            "code": r.code,
+            "tag": tag,
+            "createdAt": r.created_at.isoformat(),
+            "expiresAt": r.expires_at.isoformat(),
+            "offerId": r.offer_id,
+            "offerTitle": offer_title,
+        }
+
+    data = {
+        "total": total,
+        "slice": [_serialize_redemption(r) for r in redemptions],
+    }
+    return JsonResponse(data)
+

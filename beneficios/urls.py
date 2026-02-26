@@ -18,5 +18,6 @@ urlpatterns = [
     path("offers/manage/<int:offer_id>/", views.api_offers_detail, name="api-offers-detail"),
     path("campaign/", views.api_campaign, name="api-campaign"),
     path("redeem/", views.api_redeem, name="api-redeem"),
+    path("redemptions/", views.api_redemptions, name="api-redemptions"),
 ]
 

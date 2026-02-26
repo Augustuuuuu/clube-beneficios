@@ -1121,6 +1121,43 @@ class Model{
   async adminQuery(q,page,pageSize){
     await this.init();
     const query = (q||"").trim().toLowerCase();
+
+    // Tenta buscar direto do servidor (registros globais) quando online
+    const base = CFG.apiBase || "/api";
+    if (navigator.onLine && base) {
+      try{
+        const params = new URLSearchParams({
+          q: query,
+          page: String(page|0),
+          page_size: String(pageSize||50),
+        });
+        const res = await fetch(base + "/redemptions/?" + params.toString(), {
+          credentials: "same-origin",
+        });
+        if(res.ok){
+          const data = await res.json();
+          const total = Number(data.total||0);
+          const raw = Array.isArray(data.slice) ? data.slice : [];
+          const slice = raw.map(r=>({
+            id: r.id,
+            name: r.name || "",
+            phone: r.phone || "",
+            code: r.code || "",
+            tag: r.tag || "",
+            createdAt: r.createdAt,
+            expiresAt: r.expiresAt,
+            offerId: r.offerId,
+            offerTitle: r.offerTitle || "",
+          }));
+          this.admin.usesServer = true;
+          return { total, slice };
+        }
+      }catch(_){
+        // fallback para IndexedDB local
+      }
+    }
+
+    this.admin.usesServer = false;
     return await new Promise((resolve)=>{
       const tx = this.#tx("readonly",[CFG.stores.rec]);
       const req = tx.objectStore(CFG.stores.rec).getAll();
@@ -1284,6 +1321,7 @@ class Controller{
       q:"",
       page:0,
       pageSize:50,
+      usesServer:false,
       lock:{ admin:{f:0,l:0}, gerente:{f:0,l:0} },
       storedVerifiers: { admin:"", gerente:"" }
     };
@@ -2347,6 +2385,9 @@ Controller.prototype.adminRenderPage = async function(){
 Controller.prototype.adminDeleteOne = async function(id){
   if(!this.sessionOk()) return U.toast("Sessão expirada.","warn");
   if(!id) return;
+  if(this.admin.usesServer){
+    return U.toast("Exclusão de registros do servidor ainda não está disponível nesta versão.","warn");
+  }
   if(!confirm("Deletar este registro?")) return;
   await this.m.deleteRecord(id);
   U.toast("Registro deletado.","ok");
@@ -2355,6 +2396,9 @@ Controller.prototype.adminDeleteOne = async function(id){
 
 Controller.prototype.adminClearAll = async function(){
   if(!this.sessionOk()) return U.toast("Sessão expirada.","warn");
+  if(this.admin.usesServer){
+    return U.toast("Limpar registros do servidor ainda não está disponível nesta versão.","warn");
+  }
   if(!confirm("Apagar TODOS os registros?")) return;
   await this.m.clearAll();
   U.toast("Banco limpo.","ok");
