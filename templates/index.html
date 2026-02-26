@@ -2400,7 +2400,36 @@ Controller.prototype.adminSaveCampaign = async function(){
   if(!ttlMin || ttlMin<1 || ttlMin>1440) return U.toast("Validade inválida (1 a 1440).","bad");
 
   const camp={ ttlMs: ttlMin*60000, antiDup: anti, termsText: terms.slice(0,1400), missionText: mission.slice(0,900) };
+
+  // Atualiza no servidor (API) quando online
+  const base = CFG.apiBase || "/api";
+  if (navigator.onLine) {
+    try{
+      const res = await fetch(base + "/campaign/", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": this.getCsrfToken(),
+        },
+        body: JSON.stringify({
+          ttl_minutes: ttlMin,
+          anti_duplicate: anti,
+          terms_text: camp.termsText,
+          mission_text: camp.missionText,
+        }),
+      });
+      if(!res.ok){
+        U.toast("Erro ao salvar campanha no servidor.","bad");
+      }
+    }catch(_){
+      U.toast("Não foi possível falar com o servidor. Campanha só atualizada localmente.","warn");
+    }
+  }
+
+  // Mantém cópia local para modo offline
   await this.m.setCampaign(camp);
+  await this.syncFromServer();
   await this.renderTermsPreview();
   await this.renderMission();
   U.toast("Campanha salva.","ok");
@@ -2419,7 +2448,38 @@ Controller.prototype.parseDT = function(s){
 Controller.prototype.adminRenderOffersUI = async function(){
   const wrap=document.getElementById("admOffersWrap");
   if(!wrap) return;
-  const offers = await this.m.getOffers();
+  let offers = [];
+
+  // Busca ofertas diretamente do servidor para CRUD do gerente/admin
+  if (navigator.onLine) {
+    try{
+      const base = CFG.apiBase || "/api";
+      const res = await fetch(base + "/offers/manage/", { credentials: "same-origin" });
+      if(res.ok){
+        const data = await res.json();
+        const raw = data.offers || [];
+        offers = raw.map(o => ({
+          id: String(o.id),
+          enabled: !!o.enabled,
+          title: o.title || "",
+          description: o.description || "",
+          startAt: this.parseDT(o.start_at),
+          endAt: this.parseDT(o.end_at),
+          tag: o.tag || "OFERTA",
+          ctaText: o.cta_text || "",
+          ctaUrl: o.cta_url || "",
+        }));
+      }
+    }catch(_){
+      U.toast("Não foi possível carregar ofertas do servidor. Exibindo dados locais.","warn");
+    }
+  }
+
+  // Fallback para dados locais (modo offline)
+  if (!offers.length) {
+    offers = await this.m.getOffers();
+  }
+
   wrap.innerHTML="";
 
   offers.forEach((o, idx)=>{
@@ -2494,23 +2554,44 @@ Controller.prototype.adminAddOfferRow = async function(){
   if(!this.sessionOk()) return U.toast("Sessão expirada.","warn");
   if(this.admin.role!=="gerente") return U.toast("Somente gerente.","warn");
 
-  const offers = await this.m.getOffers();
-  const id="of_"+U.randHex(4).toUpperCase();
-  offers.push({
-    id,
-    enabled:true,
-    title:"Nova oferta",
-    description:"Descreva o benefício aqui.",
-    startAt: Date.now(),
-    endAt: Date.now() + 2*60*60*1000,
-    tag:"OFERTA",
-    ctaText:"",
-    ctaUrl:"",
-  });
-  await this.m.setOffers(offers);
-  await this.adminRenderOffersUI();
-  await this.renderOffers();
-  U.toast("Oferta adicionada.","ok");
+  const base = CFG.apiBase || "/api";
+  if(!navigator.onLine){
+    return U.toast("Precisa estar online para criar oferta no servidor.","warn");
+  }
+
+  const now = new Date();
+  const startIso = now.toISOString().slice(0,16).replace("T"," ");
+  const endIso = new Date(now.getTime()+2*60*60*1000).toISOString().slice(0,16).replace("T"," ");
+
+  try{
+    const res = await fetch(base + "/offers/manage/create/", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": this.getCsrfToken(),
+      },
+      body: JSON.stringify({
+        title: "Nova oferta",
+        description: "Descreva o benefício aqui.",
+        enabled: true,
+        tag: "OFERTA",
+        start_at: startIso,
+        end_at: endIso,
+        cta_text: "",
+        cta_url: "",
+      }),
+    });
+    if(!res.ok){
+      return U.toast("Erro ao criar oferta no servidor.","bad");
+    }
+    await this.syncFromServer();
+    await this.adminRenderOffersUI();
+    await this.renderOffers();
+    U.toast("Oferta adicionada no servidor.","ok");
+  }catch(_){
+    U.toast("Não foi possível criar oferta no servidor.","bad");
+  }
 };
 
 Controller.prototype.adminDeleteOfferRow = async function(offerId){
@@ -2518,12 +2599,29 @@ Controller.prototype.adminDeleteOfferRow = async function(offerId){
   if(this.admin.role!=="gerente") return U.toast("Somente gerente.","warn");
   if(!confirm("Remover esta oferta?")) return;
 
-  const offers = await this.m.getOffers();
-  const next = offers.filter(o=>o.id!==offerId);
-  await this.m.setOffers(next);
-  await this.adminRenderOffersUI();
-  await this.renderOffers();
-  U.toast("Oferta removida.","ok");
+  const base = CFG.apiBase || "/api";
+  if(!navigator.onLine){
+    return U.toast("Precisa estar online para remover oferta do servidor.","warn");
+  }
+
+  try{
+    const res = await fetch(base + `/offers/manage/${offerId}/`, {
+      method: "DELETE",
+      credentials: "same-origin",
+      headers: {
+        "X-CSRFToken": this.getCsrfToken(),
+      },
+    });
+    if(!res.ok){
+      return U.toast("Erro ao remover oferta no servidor.","bad");
+    }
+    await this.syncFromServer();
+    await this.adminRenderOffersUI();
+    await this.renderOffers();
+    U.toast("Oferta removida.","ok");
+  }catch(_){
+    U.toast("Não foi possível remover oferta no servidor.","bad");
+  }
 };
 
 Controller.prototype.adminSaveOffersFromUI = async function(){
@@ -2534,7 +2632,12 @@ Controller.prototype.adminSaveOffersFromUI = async function(){
   if(!wrap) return;
 
   const rows = Array.from(wrap.querySelectorAll("[data-offer-row]"));
-  const next = [];
+  const base = CFG.apiBase || "/api";
+  if(!navigator.onLine){
+    return U.toast("Precisa estar online para salvar ofertas no servidor.","warn");
+  }
+
+  const updates = [];
 
   for(const row of rows){
     const id = row.getAttribute("data-offer-row");
@@ -2545,23 +2648,53 @@ Controller.prototype.adminSaveOffersFromUI = async function(){
     const description = String(get("description")).slice(0,500).trim();
     const tag = String(get("tag")||"OFERTA").slice(0,10).trim();
 
-    const startAt = this.parseDT(get("startAt"));
-    const endAt = this.parseDT(get("endAt"));
+    const startAtMs = this.parseDT(get("startAt"));
+    const endAtMs = this.parseDT(get("endAt"));
 
     const ctaText = String(get("ctaText")).slice(0,40).trim();
     const ctaUrl = String(get("ctaUrl")).slice(0,300).trim();
 
     if(enabled){
       if(!title) return U.toast("Oferta ativa precisa de título.","bad");
-      if(!startAt || !endAt || endAt<=startAt) return U.toast("Datas inválidas em uma oferta ativa.","bad");
+      if(!startAtMs || !endAtMs || endAtMs<=startAtMs) return U.toast("Datas inválidas em uma oferta ativa.","bad");
     }
 
-    next.push({ id, enabled, title, description, startAt, endAt, tag, ctaText, ctaUrl });
+    const toIso = (ms)=> ms ? new Date(ms).toISOString().slice(0,16).replace("T"," ") : null;
+
+    updates.push({
+      id,
+      payload: {
+        enabled,
+        title,
+        description,
+        tag,
+        start_at: toIso(startAtMs),
+        end_at: toIso(endAtMs),
+        cta_text: ctaText,
+        cta_url: ctaUrl,
+      },
+    });
   }
 
-  await this.m.setOffers(next);
-  await this.renderOffers();
-  U.toast("Ofertas salvas.","ok");
+  try{
+    await Promise.all(updates.map(u =>
+      fetch(base + `/offers/manage/${u.id}/`, {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": this.getCsrfToken(),
+        },
+        body: JSON.stringify(u.payload),
+      })
+    ));
+    await this.syncFromServer();
+    await this.adminRenderOffersUI();
+    await this.renderOffers();
+    U.toast("Ofertas salvas no servidor.","ok");
+  }catch(_){
+    U.toast("Erro ao salvar ofertas no servidor.","bad");
+  }
 };
 
 Controller.prototype.adminChangeGerentePass = async function(){

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import timedelta
+from datetime import datetime, timedelta
 from secrets import token_hex
 
 from django.http import JsonResponse
@@ -28,6 +28,39 @@ def _e164_br(raw: str) -> str | None:
     return core
 
 
+def _serialize_offer(o: models.Offer) -> dict:
+    return {
+        "id": o.pk,
+        "title": o.title,
+        "description": o.description or "",
+        "tag": o.tag or "OFERTA",
+        "enabled": o.enabled,
+        "start_at": o.start_at.isoformat() if o.start_at else None,
+        "end_at": o.end_at.isoformat() if o.end_at else None,
+        "cta_text": o.cta_text or "",
+        "cta_url": o.cta_url or "",
+        "partner_name": o.partner.name if o.partner else "",
+    }
+
+
+def _parse_dt(value: str | None):
+    """Converte string ISO/\"YYYY-MM-DD HH:MM\" em datetime c/ timezone local."""
+    if not value:
+        return None
+    raw = str(value).strip()
+    if not raw:
+        return None
+    if "T" not in raw and " " in raw:
+        raw = raw.replace(" ", "T")
+    try:
+        dt = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    if dt.tzinfo is None:
+        dt = dj_timezone.make_aware(dt)
+    return dt
+
+
 @require_http_methods(["GET"])
 @ensure_csrf_cookie
 def api_offers(_request):
@@ -40,24 +73,42 @@ def api_offers(_request):
         end_ok = o.end_at is None or o.end_at >= now
         if not (start_ok and end_ok):
             continue
-        out.append({
-            "id": o.pk,
-            "title": o.title,
-            "description": o.description or "",
-            "tag": o.tag or "OFERTA",
-            "start_at": o.start_at.isoformat() if o.start_at else None,
-            "end_at": o.end_at.isoformat() if o.end_at else None,
-            "cta_text": o.cta_text or "",
-            "cta_url": o.cta_url or "",
-            "partner_name": o.partner.name if o.partner else "",
-        })
+        out.append(_serialize_offer(o))
     return JsonResponse({"offers": out, "updated_at": now.isoformat()})
 
 
-@require_http_methods(["GET"])
+@require_http_methods(["GET", "POST"])
 @ensure_csrf_cookie
-def api_campaign(_request):
-    """Retorna configuração da campanha (uma linha ou padrão)."""
+def api_campaign(request):
+    """GET: retorna configuração. POST: atualiza campanha única."""
+    if request.method == "POST":
+        try:
+            body = json.loads(request.body) if request.body else {}
+        except json.JSONDecodeError:
+            body = {}
+
+        ttl_minutes = int(body.get("ttl_minutes") or 120)
+        ttl_minutes = max(1, min(ttl_minutes, 1440))
+        anti_duplicate = bool(body.get("anti_duplicate", True))
+        terms_text = (body.get("terms_text") or "").strip()
+        mission_text = (body.get("mission_text") or "").strip()
+
+        cfg = models.CampaignConfig.objects.first()
+        if not cfg:
+            cfg = models.CampaignConfig.objects.create(
+                ttl_minutes=ttl_minutes,
+                anti_duplicate=anti_duplicate,
+                terms_text=terms_text,
+                mission_text=mission_text,
+            )
+        else:
+            cfg.ttl_minutes = ttl_minutes
+            cfg.anti_duplicate = anti_duplicate
+            cfg.terms_text = terms_text
+            cfg.mission_text = mission_text
+            cfg.save()
+
+    # Resposta GET padrão (ou após POST)
     cfg = models.CampaignConfig.objects.first()
     if cfg:
         return JsonResponse({
@@ -74,6 +125,94 @@ def api_campaign(_request):
         "mission_text": "",
         "updated_at": dj_timezone.now().isoformat(),
     })
+
+
+@require_http_methods(["GET"])
+@ensure_csrf_cookie
+def api_offers_manage(_request):
+    """Lista todas as ofertas (para painel gerente/admin)."""
+    cfg = models.CampaignConfig.objects.first()
+    qs = models.Offer.objects.all().select_related("partner").order_by("start_at", "title")
+    return JsonResponse({
+        "offers": [_serialize_offer(o) for o in qs],
+        "campaign": {
+            "ttl_minutes": cfg.ttl_minutes if cfg else 120,
+            "anti_duplicate": cfg.anti_duplicate if cfg else True,
+        },
+    })
+
+
+@require_http_methods(["POST"])
+@ensure_csrf_cookie
+def api_offers_create(request):
+    """Cria nova oferta via painel gerente."""
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        body = {}
+
+    title = (body.get("title") or "").strip()
+    if not title:
+        return JsonResponse({"error": "Título é obrigatório."}, status=400)
+
+    description = (body.get("description") or "").strip()
+    tag = (body.get("tag") or "OFERTA").strip()[:16]
+    enabled = bool(body.get("enabled", True))
+    start_at = _parse_dt(body.get("start_at"))
+    end_at = _parse_dt(body.get("end_at"))
+    cta_text = (body.get("cta_text") or "").strip()[:40]
+    cta_url = (body.get("cta_url") or "").strip()[:300]
+
+    offer = models.Offer.objects.create(
+        title=title,
+        description=description,
+        tag=tag or "OFERTA",
+        enabled=enabled,
+        start_at=start_at,
+        end_at=end_at,
+        cta_text=cta_text,
+        cta_url=cta_url,
+    )
+    return JsonResponse(_serialize_offer(offer), status=201)
+
+
+@require_http_methods(["PUT", "PATCH", "DELETE"])
+@ensure_csrf_cookie
+def api_offers_detail(request, offer_id: int):
+    """Atualiza ou remove uma oferta existente."""
+    try:
+        offer = models.Offer.objects.get(pk=offer_id)
+    except models.Offer.DoesNotExist:
+        return JsonResponse({"error": "Oferta não encontrada."}, status=404)
+
+    if request.method == "DELETE":
+        offer.delete()
+        return JsonResponse({"status": "deleted"})
+
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        body = {}
+
+    if "title" in body:
+        offer.title = (body.get("title") or "").strip()
+    if "description" in body:
+        offer.description = (body.get("description") or "").strip()
+    if "tag" in body:
+        offer.tag = (body.get("tag") or "OFERTA").strip()[:16]
+    if "enabled" in body:
+        offer.enabled = bool(body.get("enabled"))
+    if "start_at" in body:
+        offer.start_at = _parse_dt(body.get("start_at"))
+    if "end_at" in body:
+        offer.end_at = _parse_dt(body.get("end_at"))
+    if "cta_text" in body:
+        offer.cta_text = (body.get("cta_text") or "").strip()[:40]
+    if "cta_url" in body:
+        offer.cta_url = (body.get("cta_url") or "").strip()[:300]
+
+    offer.save()
+    return JsonResponse(_serialize_offer(offer))
 
 
 @require_http_methods(["GET", "POST"])
