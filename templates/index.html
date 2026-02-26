@@ -1149,15 +1149,13 @@ class Model{
             offerId: r.offerId,
             offerTitle: r.offerTitle || "",
           }));
-          this.admin.usesServer = true;
-          return { total, slice };
+          return { total, slice, fromServer:true };
         }
       }catch(_){
         // fallback para IndexedDB local
       }
     }
 
-    this.admin.usesServer = false;
     return await new Promise((resolve)=>{
       const tx = this.#tx("readonly",[CFG.stores.rec]);
       const req = tx.objectStore(CFG.stores.rec).getAll();
@@ -1175,7 +1173,7 @@ class Model{
         all.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
         const total=all.length;
         const start=page*pageSize;
-        resolve({total, slice: all.slice(start,start+pageSize)});
+        resolve({total, slice: all.slice(start,start+pageSize), fromServer:false });
       };
       req.onerror=()=>resolve({total:0, slice:[]});
     });
@@ -2353,7 +2351,8 @@ Controller.prototype.adminRenderPage = async function(){
   const pageEl=document.getElementById("admPage");
   if(!tbody||!totalEl||!pageEl) return;
 
-  const {total, slice}=await this.m.adminQuery(this.admin.q, this.admin.page, this.admin.pageSize);
+  const {total, slice, fromServer}=await this.m.adminQuery(this.admin.q, this.admin.page, this.admin.pageSize);
+  this.admin.usesServer = !!fromServer;
   totalEl.textContent=String(total);
   pageEl.textContent=String(this.admin.page+1);
 
