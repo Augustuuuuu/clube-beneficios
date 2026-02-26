@@ -1925,26 +1925,9 @@ class Controller{
   saveRateLimit(){
     try{ localStorage.setItem("_cbo_role_rate_v5", JSON.stringify(this.admin.lock)); }catch{}
   }
-  isLocked(role){ return Date.now() < (this.admin.lock[role]?.l||0); }
-  lockMsg(role){
-    const o=this.admin.lock[role]||{f:0,l:0};
-    if(this.isLocked(role)){
-      const ms=o.l-Date.now();
-      const m=Math.ceil(ms/60000);
-      return `Bloqueado (~${m} min)`;
-    }
-    if(o.f>0) return `Falhas ${o.f}/${CFG.maxFails}`;
-    return "OK";
-  }
-  bumpFail(role){
-    const o=this.admin.lock[role];
-    o.f=(o.f|0)+1;
-    if(o.f>=CFG.maxFails){
-      o.l=Date.now()+CFG.lockMs;
-      U.toast(`Muitas tentativas (${role}). Bloqueado.`, "bad");
-    }
-    this.saveRateLimit();
-  }
+  isLocked(_role){ return false; }
+  lockMsg(_role){ return "OK"; }
+  bumpFail(_role){}
 
   sessionOk(){ return this.admin.role && Date.now() < this.admin.sessionUntil; }
 }
@@ -2061,32 +2044,15 @@ Controller.prototype.adminLogin = async function(){
   const pass=passEl.value||"";
   if(!pass){ U.toast("Digite a senha.","warn"); passEl.focus(); return; }
 
-  const bothLocked = this.isLocked("admin") && this.isLocked("gerente");
-  if(bothLocked){
-    U.toast("Acesso temporariamente bloqueado.","bad");
-    document.getElementById("admLockInfo").textContent = `Admin: ${this.lockMsg("admin")} • Gerente: ${this.lockMsg("gerente")}`;
-    return;
-  }
-
   const stored = await this.m.getMeta("roleVerifiers");
   if(stored?.admin && stored?.gerente) this.admin.storedVerifiers = stored;
 
   const role = await CryptoAuth.verifyRole(pass, this.admin.storedVerifiers);
   if(!role){
-    this.bumpFail("admin");
-    this.bumpFail("gerente");
     U.toast("Senha incorreta.","bad");
     document.getElementById("admLockInfo").textContent = `Admin: ${this.lockMsg("admin")} • Gerente: ${this.lockMsg("gerente")}`;
     return;
   }
-
-  if(this.isLocked(role)){
-    U.toast("Conta bloqueada por segurança.","warn");
-    document.getElementById("admLockInfo").textContent = `Admin: ${this.lockMsg("admin")} • Gerente: ${this.lockMsg("gerente")}`;
-    return;
-  }
-
-  this.admin.lock[role].f=0; this.admin.lock[role].l=0; this.saveRateLimit();
 
   this.admin.role = role;
   this.admin.sessionUntil = Date.now() + CFG.sessionMs;
