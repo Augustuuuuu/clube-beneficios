@@ -228,8 +228,14 @@
     min-height:44px;
     width:100%;
   }
-  @media (max-width: 480px){
-    .resultActions{ grid-template-columns:1fr; }
+  .resultActionsFull{
+    width:100%;
+    max-width:100%;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  @media (max-width: 380px){
+    .resultActionsFull{ grid-template-columns:1fr; }
   }
 
   .kbd{
@@ -306,19 +312,18 @@
 
   .qrRow{
     display:flex;
+    flex-direction:column;
     gap:14px;
-    flex-wrap:wrap;
-    align-items:flex-start;
+    align-items:stretch;
   }
   .qrRow .resultInfoCol{
-    flex:1;
+    width:100%;
     min-width:0;
     display:grid;
     gap:10px;
   }
-  @media (max-width: 620px){
-    .qrRow{ flex-direction:column; align-items:stretch; }
-    .qrRow .resultInfoCol{ width:100%; min-width:unset; }
+  .qrRow > div:first-child{
+    align-self:flex-start;
   }
 
   footer{
@@ -505,9 +510,9 @@
                   <div class="offerMeta"><strong>Validade:</strong> <span id="expiryText" class="kbd">—</span></div>
                   <div class="offerMeta"><strong>WhatsApp:</strong> <span id="phonePretty" class="kbd">—</span></div>
 
-                  <div class="resultActions">
+                  <div class="resultActions resultActionsFull">
                     <button id="btnShare" class="ghost" type="button"><span aria-hidden="true">📤</span> Compartilhar</button>
-                    <button id="btnWhats" class="ghost" type="button"><span aria-hidden="true">🟢</span> WhatsApp</button>
+                    <button id="btnWhats" class="ghost" type="button"><span aria-hidden="true">🟢</span> Partilhar no WhatsApp</button>
                   </div>
 
                   <div id="missionBox" class="codeCard" style="display:none;">
