@@ -228,7 +228,7 @@
     min-height:44px;
     width:100%;
   }
-  @media (max-width: 420px){
+  @media (max-width: 480px){
     .resultActions{ grid-template-columns:1fr; }
   }
 
@@ -277,8 +277,9 @@
   .offerPickRow{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
   .offerBtn{ width:auto; min-width:170px; }
 
-  .resultWrap{ display:none; gap:12px; }
+  .resultWrap{ display:none; gap:12px; max-width:100%; }
   .resultWrap.show{ display:grid; }
+  #codeCard{ max-width:100%; overflow-wrap:break-word; }
 
   .codeLine{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
   .code{
@@ -303,7 +304,22 @@
     .tag{ background: rgba(15,23,42,.06); }
   }
 
-  .qrRow{ display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start; }
+  .qrRow{
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+    align-items:flex-start;
+  }
+  .qrRow .resultInfoCol{
+    flex:1;
+    min-width:0;
+    display:grid;
+    gap:10px;
+  }
+  @media (max-width: 620px){
+    .qrRow{ flex-direction:column; align-items:stretch; }
+    .qrRow .resultInfoCol{ width:100%; min-width:unset; }
+  }
 
   footer{
     padding:0 6px;
@@ -484,7 +500,7 @@
                   <div class="offerMeta" style="margin-top:8px;">QR do seu código.</div>
                 </div>
 
-                <div style="flex:1; min-width:220px; display:grid; gap:10px;">
+                <div class="resultInfoCol">
                   <div class="offerMeta"><strong>Oferta:</strong> <span class="kbd" id="offerChosen">—</span></div>
                   <div class="offerMeta"><strong>Validade:</strong> <span id="expiryText" class="kbd">—</span></div>
                   <div class="offerMeta"><strong>WhatsApp:</strong> <span id="phonePretty" class="kbd">—</span></div>
@@ -1145,18 +1161,29 @@ class Model{
     });
   }
 
-  async listRecent(limit=5){
+  async listRecent(limit=5, phoneFilter=null){
     await this.init();
     return await new Promise((resolve)=>{
       const tx = this.#tx("readonly",[CFG.stores.rec]);
-      const idx = tx.objectStore(CFG.stores.rec).index("byTs");
-      const req = idx.getAll();
-      req.onsuccess=()=>{
-        const all=req.result||[];
-        all.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
-        resolve(all.slice(0,limit));
-      };
-      req.onerror=()=>resolve([]);
+      const store = tx.objectStore(CFG.stores.rec);
+      if(phoneFilter){
+        const idx = store.index("byPhone");
+        const req = idx.getAll(phoneFilter);
+        req.onsuccess=()=>{
+          const all=req.result||[];
+          all.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+          resolve(all.slice(0,limit));
+        };
+        req.onerror=()=>resolve([]);
+      }else{
+        const req = store.index("byTs").getAll();
+        req.onsuccess=()=>{
+          const all=req.result||[];
+          all.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+          resolve(all.slice(0,limit));
+        };
+        req.onerror=()=>resolve([]);
+      }
     });
   }
 
@@ -1775,22 +1802,31 @@ class Controller{
         }
         if (data.code) {
           const expiresAt = new Date(data.expires_at).getTime();
-          const rec = {
-            id: "srv_" + U.randHex(8),
-            name,
-            phone,
-            code: data.code,
-            tag: data.tag || offer.tag,
-            createdAt: now,
-            expiresAt,
-            dayKey: new Date(now).toISOString().slice(0, 10),
-            offerId: offer.id,
-            offerTitle: data.offer_title || offer.title,
-            offerPhoneKey: `${offer.id}::${phone}`,
-          };
-          await this.m.putRecord(rec);
+          const offerPhoneKey = `${offer.id}::${phone}`;
+          let rec = data.reused ? await this.m.findLatestByOfferPhone(offerPhoneKey) : null;
+          if (!rec) {
+            rec = {
+              id: "srv_" + U.randHex(8),
+              name,
+              phone,
+              code: data.code,
+              tag: data.tag || offer.tag,
+              createdAt: now,
+              expiresAt,
+              dayKey: new Date(now).toISOString().slice(0, 10),
+              offerId: offer.id,
+              offerTitle: data.offer_title || offer.title,
+              offerPhoneKey,
+            };
+            await this.m.putRecord(rec);
+          } else {
+            rec.name = name;
+            rec.expiresAt = expiresAt;
+            rec.code = data.code;
+            await this.m.putRecord(rec);
+          }
           this.btnState("success");
-          this.status("ok", data.reused ? "Código recuperado (mesma oferta + WhatsApp)." : "Código gerado. Apresente no balcão.", false);
+          this.status("ok", data.reused ? "Código já existente. Use o tempo restante abaixo." : "Código gerado. Apresente no balcão.", false);
           this.renderResult(rec);
           await this.renderRecent();
           await this.renderMission();
@@ -1860,14 +1896,24 @@ class Controller{
 
   async renderRecent(){
     const host=document.getElementById("recentList");
-    const list=await this.m.listRecent(5);
+    const phoneEl=document.getElementById("telefone");
+    const phoneRaw=(phoneEl?.value||"").trim();
+    const phone=this.normalizePhone(phoneRaw)||null;
+    const list=await this.m.listRecent(5, phone);
     host.innerHTML="";
+    if(!phone){
+      host.innerHTML = `<div class="offerMeta">Digite seu WhatsApp acima para ver apenas os códigos que você gerou.</div>`;
+      return;
+    }
     if(!list.length){
-      host.innerHTML = `<div class="offerMeta">Sem histórico ainda. Gere seu primeiro código acima.</div>`;
+      host.innerHTML = `<div class="offerMeta">Você ainda não gerou códigos com este WhatsApp. Gere seu primeiro código acima.</div>`;
       return;
     }
     const frag=document.createDocumentFragment();
     for(const r of list){
+      const expiresAt = r.expiresAt;
+      const isExpired = expiresAt && Date.now() > expiresAt;
+      const timeLabel = isExpired ? "Expirado" : (expiresAt ? this._formatTimeLeft(expiresAt) : "");
       const el=document.createElement("div");
       el.className="offerItem";
       el.innerHTML=`
@@ -1878,13 +1924,21 @@ class Controller{
           </div>
           <div class="kbd">${U.esc(r.code)}</div>
         </div>
-        <div class="offerMeta">Criado: ${U.esc(U.fmtDT(r.createdAt))}</div>
+        <div class="offerMeta">Criado: ${U.esc(U.fmtDT(r.createdAt))}${timeLabel ? ` • ${timeLabel}` : ""}</div>
       `;
-      // clique copia
       el.addEventListener("click", ()=> this.copyText(r.code), {passive:true});
       frag.appendChild(el);
     }
     host.appendChild(frag);
+  }
+  _formatTimeLeft(expiresAt){
+    const ms=Math.max(0, expiresAt-Date.now());
+    if(ms<=0) return "Expirado";
+    const h=Math.floor(ms/3600000);
+    const m=Math.floor((ms%3600000)/60000);
+    if(h>0) return `Restam ${h}h ${m}m`;
+    if(m>0) return `Restam ${m} min`;
+    return "Expira em instantes";
   }
 
   async copyText(txt){
@@ -1945,6 +1999,7 @@ class Controller{
       const input=document.getElementById("telefone");
       if(input) input.value = U.maskPhone(digits);
     }, 18);
+    this.debouncedRenderRecent = U.debounce(()=> this.renderRecent(), 400);
   }
 
   onKey(e){
@@ -1958,7 +2013,10 @@ class Controller{
   onInput(e){
     const t=e.target;
     if(!t) return;
-    if(t.id==="telefone") this.debouncedPhoneMask(U.onlyDigits(t.value));
+    if(t.id==="telefone"){
+      this.debouncedPhoneMask(U.onlyDigits(t.value));
+      this.debouncedRenderRecent();
+    }
     if(t.id==="admSearch") this.debouncedAdminSearch(t.value);
   }
 
