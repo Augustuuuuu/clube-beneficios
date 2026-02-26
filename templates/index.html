@@ -163,25 +163,29 @@
   }
 
   .row{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; min-width:0; }
+  .row > *{ min-width:0; }
   @media (max-width: 560px){ .row{ grid-template-columns: 1fr; } }
   @media (max-width: 480px){ .row{ gap: 10px; } }
 
-  label{ display:block; color:var(--muted); font-size:13px; margin:0 0 6px; font-weight:900; }
+  label{ display:block; color:var(--muted); font-size:clamp(12px, 2.5vw, 13px); margin:0 0 6px; font-weight:900; }
 
   input,select,textarea{
     width:100%;
-    min-height:48px;
+    min-width:0;
+    min-height: clamp(44px, 12vw, 48px);
     max-width:100%;
-    padding:12px 12px;
-    border-radius:12px;
+    padding: clamp(10px, 2.5vw, 12px) clamp(10px, 3vw, 14px);
+    border-radius: clamp(10px, 2.5vw, 12px);
     border:1px solid rgba(255,255,255,.18);
     background:rgba(0,0,0,.22);
     color:var(--text);
     outline:none;
     transition: box-shadow .15s ease, border-color .15s ease;
-    font-size:16px;
+    font-size: max(16px, 1em);
     font-family:inherit;
     box-sizing:border-box;
+    -webkit-appearance: none;
+    appearance: none;
   }
   @media (prefers-color-scheme: light){
     input,select,textarea{
@@ -189,15 +193,28 @@
       border-color:rgba(15,23,42,.20);
       color: var(--text);
     }
+    select{
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23334155' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+    }
   }
   input:focus-visible,select:focus-visible,textarea:focus-visible{
     border-color: rgba(255,59,107,.65);
     box-shadow: var(--focus);
   }
+  select{
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a9b7d1' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
 
-  textarea{ min-height: 96px; resize: vertical; }
+  textarea{ min-height: clamp(80px, 22vw, 96px); resize: vertical; }
 
-  .hint{ color:var(--muted); font-size:12px; line-height:1.35; margin-top:6px; }
+  .hint{ color:var(--muted); font-size:clamp(11px, 2.2vw, 12px); line-height:1.35; margin-top:6px; }
+  @media (max-width: 360px){
+    input,select,textarea{ padding: 8px 10px; min-height: 44px; }
+    .content{ padding: 10px 8px; }
+  }
 
   button{
     width:100%;
