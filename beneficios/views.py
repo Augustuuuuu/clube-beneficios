@@ -365,3 +365,23 @@ def api_redemptions(request):
     }
     return JsonResponse(data)
 
+
+@require_http_methods(["DELETE"])
+@ensure_csrf_cookie
+def api_redemption_detail(request, redemption_id: int):
+    """Remove um resgate pelo ID."""
+    try:
+        redemption = models.Redemption.objects.get(pk=redemption_id)
+    except models.Redemption.DoesNotExist:
+        return JsonResponse({"error": "Resgate não encontrado."}, status=404)
+    redemption.delete()
+    return JsonResponse({"status": "deleted"})
+
+
+@require_http_methods(["DELETE"])
+@ensure_csrf_cookie
+def api_redemptions_clear(request):
+    """Remove todos os resgates."""
+    count, _ = models.Redemption.objects.all().delete()
+    return JsonResponse({"status": "cleared", "deleted": count})
+

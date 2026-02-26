@@ -19,5 +19,7 @@ urlpatterns = [
     path("campaign/", views.api_campaign, name="api-campaign"),
     path("redeem/", views.api_redeem, name="api-redeem"),
     path("redemptions/", views.api_redemptions, name="api-redemptions"),
+    path("redemptions/clear/", views.api_redemptions_clear, name="api-redemptions-clear"),
+    path("redemptions/<int:redemption_id>/", views.api_redemption_detail, name="api-redemption-detail"),
 ]
 

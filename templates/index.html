@@ -2384,10 +2384,29 @@ Controller.prototype.adminRenderPage = async function(){
 Controller.prototype.adminDeleteOne = async function(id){
   if(!this.sessionOk()) return U.toast("Sessão expirada.","warn");
   if(!id) return;
-  if(this.admin.usesServer){
-    return U.toast("Exclusão de registros do servidor ainda não está disponível nesta versão.","warn");
-  }
   if(!confirm("Deletar este registro?")) return;
+
+  if(this.admin.usesServer){
+    const base = CFG.apiBase || "/api";
+    if(!navigator.onLine) return U.toast("Precisa estar online para excluir registro do servidor.","warn");
+    try{
+      const res = await fetch(base + "/redemptions/" + encodeURIComponent(id) + "/", {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: { "X-CSRFToken": this.getCsrfToken() },
+      });
+      if(!res.ok){
+        const err = await res.json().catch(()=>({}));
+        return U.toast(err.error || "Erro ao excluir registro no servidor.","bad");
+      }
+      U.toast("Registro excluído.","ok");
+      await this.adminRefresh();
+    }catch(_){
+      U.toast("Não foi possível excluir registro no servidor.","bad");
+    }
+    return;
+  }
+
   await this.m.deleteRecord(id);
   U.toast("Registro deletado.","ok");
   await this.adminRefresh();
@@ -2395,10 +2414,30 @@ Controller.prototype.adminDeleteOne = async function(id){
 
 Controller.prototype.adminClearAll = async function(){
   if(!this.sessionOk()) return U.toast("Sessão expirada.","warn");
-  if(this.admin.usesServer){
-    return U.toast("Limpar registros do servidor ainda não está disponível nesta versão.","warn");
-  }
   if(!confirm("Apagar TODOS os registros?")) return;
+
+  if(this.admin.usesServer){
+    const base = CFG.apiBase || "/api";
+    if(!navigator.onLine) return U.toast("Precisa estar online para limpar registros do servidor.","warn");
+    try{
+      const res = await fetch(base + "/redemptions/clear/", {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: { "X-CSRFToken": this.getCsrfToken() },
+      });
+      if(!res.ok){
+        const err = await res.json().catch(()=>({}));
+        return U.toast(err.error || "Erro ao limpar registros no servidor.","bad");
+      }
+      const data = await res.json().catch(()=>({}));
+      U.toast(data.deleted ? `${data.deleted} registro(s) removido(s).` : "Registros limpos.","ok");
+      await this.adminRefresh();
+    }catch(_){
+      U.toast("Não foi possível limpar registros no servidor.","bad");
+    }
+    return;
+  }
+
   await this.m.clearAll();
   U.toast("Banco limpo.","ok");
   await this.adminRefresh();
@@ -2644,19 +2683,25 @@ Controller.prototype.adminDeleteOfferRow = async function(offerId){
 
   const base = CFG.apiBase || "/api";
   if(!navigator.onLine){
-    return U.toast("Precisa estar online para remover oferta do servidor.","warn");
+    const offers = await this.m.getOffers();
+    const next = offers.filter(o => String(o.id) !== String(offerId));
+    if(next.length === offers.length) return U.toast("Oferta não encontrada localmente.","warn");
+    await this.m.setOffers(next);
+    await this.adminRenderOffersUI();
+    await this.renderOffers();
+    U.toast("Oferta removida (lista local).","ok");
+    return;
   }
 
   try{
-    const res = await fetch(base + `/offers/manage/${offerId}/`, {
+    const res = await fetch(base + `/offers/manage/${encodeURIComponent(offerId)}/`, {
       method: "DELETE",
       credentials: "same-origin",
-      headers: {
-        "X-CSRFToken": this.getCsrfToken(),
-      },
+      headers: { "X-CSRFToken": this.getCsrfToken() },
     });
     if(!res.ok){
-      return U.toast("Erro ao remover oferta no servidor.","bad");
+      const err = await res.json().catch(()=>({}));
+      return U.toast(err.error || "Erro ao remover oferta no servidor.","bad");
     }
     await this.syncFromServer();
     await this.adminRenderOffersUI();
