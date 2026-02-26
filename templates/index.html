@@ -420,7 +420,7 @@
             <strong style="font-size:14px;">Ofertas ativas agora</strong>
             <div class="offerMeta">Selecione uma oferta. O código gerado fica vinculado à oferta escolhida.</div>
             <div id="offerList" class="offerList"></div>
-            <div class="offerMeta">Se nenhuma oferta aparecer, o gerente precisa ativar pelo painel.</div>
+            <div id="offerListHint" class="offerMeta">Se nenhuma oferta aparecer, o gerente precisa ativar pelo painel.</div>
           </div>
 
           <div class="row" role="group" aria-label="Dados para resgate">
@@ -511,12 +511,12 @@
       <!-- SIDE -->
       <section class="card" aria-labelledby="sideTitle">
         <div class="head">
-          <h2 id="sideTitle">Preferências e status</h2>
+          <h2 id="sideTitle">Conexão e preferências</h2>
           <span class="pill">🎨 tema</span>
         </div>
         <div class="content">
           <div class="codeCard">
-            <strong style="font-size:14px;">Status do sistema</strong>
+            <strong style="font-size:14px;">Conexão e sincronia</strong>
             <div class="offerMeta" id="sysInfo">Inicializando…</div>
           </div>
 
@@ -553,7 +553,7 @@
     </div>
 
     <footer>
-      <span>Clube de Benefícios Oficial • arquivo único • PWA + Offline</span>
+      <span>Clube de Benefícios • Ofertas e resgates sincronizados com o servidor quando online</span>
       <span><span class="kbd">©</span> 2026</span>
     </footer>
   </div>
@@ -949,6 +949,9 @@ const CFG = Object.freeze({
   dbVer: 1,
   stores: { rec:"records", meta:"meta", admin:"adminlog" },
 
+  apiBase: "/api",
+  pollIntervalMs: 45 * 1000,
+
   pbkdf2: { iter: 150000, hash:"SHA-256", baseSalt:"cbo_base_salt_2026_v5", pepper:"pepper::cbo::v5" },
 
   maxFails: 5,
@@ -1269,6 +1272,9 @@ class Controller{
 
     this.selectedOfferId = null;
 
+    this.serverData = { offers: [], campaign: null, updatedAt: null };
+    this.pollTimer = 0;
+
     this.admin = {
       open:false,
       role:null,
@@ -1293,11 +1299,15 @@ class Controller{
     await this.loadThemeUI();
     await this.ensureAuthSetup();
 
+    await this.syncFromServer();
     await this.renderTermsPreview();
     await this.renderOffers();
     await this.renderRecent();
     this.wireUI();
     this.sysInfo();
+
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.pollTimer = setInterval(() => this.syncFromServer(), CFG.pollIntervalMs);
 
     U.toast("Pronto. Escolha uma oferta e gere seu código. ✨","ok");
   }
@@ -1359,7 +1369,55 @@ class Controller{
 
   sysInfo(){
     const el=document.getElementById("sysInfo");
-    el.textContent = `Armazenamento: IndexedDB • Rede: ${navigator.onLine?"online":"offline"} • WebCrypto: ${crypto?.subtle?"ok":"indisp."}`;
+    const server = this.serverData.updatedAt
+      ? ` • Servidor: ${new Date(this.serverData.updatedAt).toLocaleTimeString("pt-BR")}`
+      : "";
+    el.textContent = `Armazenamento: IndexedDB • Rede: ${navigator.onLine?"online":"offline"}${server} • WebCrypto: ${crypto?.subtle?"ok":"indisp."}`;
+  }
+
+  getCsrfToken(){
+    const m = document.cookie.match(/csrftoken=([^;]+)/);
+    return m ? decodeURIComponent(m[1].trim()) : "";
+  }
+
+  async syncFromServer(){
+    if(!navigator.onLine) return;
+    const base = CFG.apiBase || "/api";
+    try {
+      const [rOffers, rCampaign] = await Promise.all([
+        fetch(base + "/offers/", { credentials: "same-origin" }),
+        fetch(base + "/campaign/", { credentials: "same-origin" }),
+      ]);
+      if(!rOffers.ok || !rCampaign.ok) return;
+      const dataOffers = await rOffers.json();
+      const dataCampaign = await rCampaign.json();
+      const offers = (dataOffers.offers || []).map(o => ({
+        id: o.id,
+        title: o.title,
+        description: o.description || "",
+        tag: o.tag || "OFERTA",
+        startAt: o.start_at ? new Date(o.start_at).getTime() : null,
+        endAt: o.end_at ? new Date(o.end_at).getTime() : null,
+        ctaText: o.cta_text || "",
+        ctaUrl: o.cta_url || "",
+        enabled: true,
+        partner_name: o.partner_name || "",
+      }));
+      const updatedAt = dataOffers.updated_at || dataCampaign.updated_at;
+      this.serverData = {
+        offers,
+        campaign: {
+          ttlMs: (dataCampaign.ttl_minutes || 120) * 60 * 1000,
+          antiDup: !!dataCampaign.anti_duplicate,
+          termsText: dataCampaign.terms_text || "",
+          missionText: dataCampaign.mission_text || "",
+        },
+        updatedAt: updatedAt ? new Date(updatedAt).getTime() : Date.now(),
+      };
+      await this.renderOffers();
+      await this.renderTermsPreview();
+      this.sysInfo();
+    } catch (_) {}
   }
 
   /* ---------------------------
@@ -1413,7 +1471,7 @@ class Controller{
      --------------------------- */
   async renderTermsPreview(){
     const el=document.getElementById("termsPreview");
-    const c=await this.m.getCampaign();
+    const c = this.serverData.campaign || await this.m.getCampaign();
     el.innerHTML = U.esc(c.termsText||"").replace(/\n/g,"<br>");
   }
 
@@ -1445,9 +1503,8 @@ class Controller{
 
   async renderOffers(){
     const host = document.getElementById("offerList");
-    const offers = await this.m.getOffers();
     const now = Date.now();
-
+    let offers = this.serverData.offers?.length ? this.serverData.offers : await this.m.getOffers();
     const active = offers.filter(o=>this.offerActive(o, now))
       .sort((a,b)=>(a.endAt||0)-(b.endAt||0));
 
@@ -1484,8 +1541,15 @@ class Controller{
     }
     host.appendChild(frag);
 
+    const hint = document.getElementById("offerListHint");
+    if (hint) {
+      hint.textContent = this.serverData.updatedAt
+        ? `Sincronizado com o servidor às ${new Date(this.serverData.updatedAt).toLocaleTimeString("pt-BR")}. Atualização automática a cada ${CFG.pollIntervalMs/1000}s.`
+        : "Se nenhuma oferta aparecer, o gerente precisa ativar pelo painel.";
+    }
+
     // auto escolher a primeira
-    if(!this.selectedOfferId) this.pickOffer(active[0].id);
+    if(!this.selectedOfferId && active.length) this.pickOffer(active[0].id);
   }
 
   pickOffer(offerId){
@@ -1551,7 +1615,7 @@ class Controller{
   async renderMission(){
     const box = document.getElementById("missionBox");
     const text = document.getElementById("missionText");
-    const camp = await this.m.getCampaign();
+    const camp = this.serverData.campaign || await this.m.getCampaign();
     const msg = (camp.missionText || "").trim();
     if(!msg){ box.style.display="none"; return; }
     box.style.display="grid";
@@ -1575,7 +1639,7 @@ class Controller{
     if(!name){ this.status("bad","Informe seu nome.", true); nameEl.focus(); return U.toast("Preencha o nome.","warn"); }
     if(!phone){ this.status("bad","WhatsApp inválido. Use DDD válido.", true); phoneEl.focus(); return U.toast("WhatsApp inválido.","bad"); }
 
-    const offers = await this.m.getOffers();
+    const offers = this.serverData.offers?.length ? this.serverData.offers : await this.m.getOffers();
     const offer = offers.find(o=>o.id===this.selectedOfferId);
     if(!offer || !this.offerActive(offer, Date.now())){
       await this.renderOffers();
@@ -1583,9 +1647,54 @@ class Controller{
       return U.toast("Oferta mudou. Escolha outra.","warn");
     }
 
-    const camp = await this.m.getCampaign();
+    const camp = this.serverData.campaign || await this.m.getCampaign();
     const now=Date.now();
     this.btnState("loading");
+
+    const isServerOffer = typeof this.selectedOfferId === "number";
+    if (isServerOffer && navigator.onLine) {
+      try {
+        const base = CFG.apiBase || "/api";
+        const res = await fetch(base + "/redeem/", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": this.getCsrfToken(),
+          },
+          body: JSON.stringify({
+            offer_id: this.selectedOfferId,
+            full_name: name,
+            whatsapp: phone,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.code) {
+          const expiresAt = new Date(data.expires_at).getTime();
+          const rec = {
+            id: "srv_" + U.randHex(8),
+            name,
+            phone,
+            code: data.code,
+            tag: data.tag || offer.tag,
+            createdAt: now,
+            expiresAt,
+            dayKey: new Date(now).toISOString().slice(0, 10),
+            offerId: offer.id,
+            offerTitle: data.offer_title || offer.title,
+            offerPhoneKey: `${offer.id}::${phone}`,
+          };
+          await this.m.putRecord(rec);
+          this.btnState("success");
+          this.status("ok", data.reused ? "Código recuperado (mesma oferta + WhatsApp)." : "Código gerado. Apresente no balcão.", false);
+          this.renderResult(rec);
+          await this.renderRecent();
+          await this.renderMission();
+          nameEl.value = ""; phoneEl.value = ""; nameEl.focus();
+          return;
+        }
+      } catch (_) {}
+    }
 
     // Anti-duplicidade por (telefone + oferta)
     const offerPhoneKey = `${offer.id}::${phone}`;
