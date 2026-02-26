@@ -1,0 +1,617 @@
+  :root{
+    --bg:#0b1220; --bg2:#0f1a33;
+    --card:rgba(255,255,255,.08); --card2:rgba(255,255,255,.12);
+    --text:#f8fafc; --muted:#a9b7d1; --line:rgba(255,255,255,.16);
+    --accent:#ff3b6b; --accent2:#ff6f91; --accentGlow:rgba(255,59,107,.22);
+
+    --ok:#41d18f; --warn:#ffd166; --bad:#ff5c5c;
+    --shadow:0 18px 60px rgba(0,0,0,.45);
+    --radius:18px;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+    --sans:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+
+    --focus:0 0 0 4px var(--accentGlow);
+    --sheetBg:rgba(0,0,0,.55);
+
+    --admBg: #0b0f1a;
+    --admCard: rgba(255,255,255,.08);
+    --admLine: rgba(255,255,255,.16);
+    --admText: #f8fafc;
+    --admMuted:#9fb0cf;
+    --admAccent:#60a5fa;
+    --admAccent2:#2dd4bf;
+    --admGlow: rgba(96,165,250,.22);
+  }
+
+  /* LIGHT com contraste REAL (antes estava claro demais) */
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f6f8ff; --bg2:#eef2ff;
+
+      /* cards mais sólidos */
+      --card:rgba(15,23,42,.07);
+      --card2:rgba(15,23,42,.10);
+
+      /* textos mais escuros */
+      --text:#0b1220;
+      --muted:#334155;
+
+      /* linhas mais visíveis */
+      --line:rgba(15,23,42,.18);
+
+      --shadow:0 14px 50px rgba(2,6,23,.12);
+      --sheetBg:rgba(10,15,30,.42);
+    }
+  }
+
+  *{ box-sizing:border-box; }
+  /* Uma única rolagem: só o documento (navegador). Nenhum elemento da tela principal cria barra. */
+  html{
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-text-size-adjust: 100%;
+    min-height: 100%;
+    width: 100%;
+  }
+  /* Mobile-first: base = celular (320px–430px). Desktop via min-width mais abaixo. */
+  body{
+    margin:0;
+    min-height: 100%;
+    width: 100%;
+    max-width: 100vw;
+    font-family:var(--sans);
+    color:var(--text);
+    background:
+      radial-gradient(1050px 650px at 20% 12%, var(--accentGlow), transparent 65%),
+      radial-gradient(950px 650px at 80% 20%, rgba(88,101,242,.14), transparent 60%),
+      radial-gradient(900px 700px at 50% 92%, rgba(65,209,143,.10), transparent 60%),
+      linear-gradient(180deg, var(--bg), var(--bg2));
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: clamp(10px, 2.5vw, 14px);
+    padding-left: max(clamp(10px, 2.5vw, 14px), env(safe-area-inset-left));
+    padding-right: max(clamp(10px, 2.5vw, 14px), env(safe-area-inset-right));
+    padding-bottom: max(clamp(10px, 2.5vw, 14px), env(safe-area-inset-bottom));
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
+    box-sizing:border-box;
+  }
+
+  .wrap{ width:100%; max-width:100%; display:grid; gap:clamp(12px, 2.5vw, 18px); box-sizing:border-box; min-width:0; padding:0; overflow-x:hidden; }
+  header{ display:flex; align-items:flex-start; justify-content:space-between; gap:clamp(8px, 2vw, 14px); padding:0 clamp(4px, 1vw, 8px); min-width:0; flex-wrap:wrap; }
+  .brand{ display:flex; flex-direction:column; gap:clamp(8px, 1.5vw, 10px); min-width:0; flex:1; }
+  .titleRow{ display:flex; align-items:center; gap:clamp(8px, 1.5vw, 10px); flex-wrap:wrap; min-width:0; }
+  h1{ margin:0; font-size:clamp(18px, 5vw, 24px); letter-spacing:-0.02em; line-height:1.2; display:flex; align-items:center; gap:clamp(8px, 1.5vw, 10px); flex-wrap:wrap; min-width:0; word-break:break-word; }
+
+  #secretEmoji{
+    display:inline-grid; place-items:center;
+    width: clamp(40px, 11vw, 44px);
+    height: clamp(40px, 11vw, 44px);
+    border-radius: clamp(12px, 3vw, 14px);
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.06);
+    cursor:pointer; user-select:none; touch-action:manipulation;
+    transition: transform .12s ease, filter .2s ease;
+    flex-shrink: 0;
+  }
+  #secretEmoji:hover{ filter:brightness(1.06); }
+  #secretEmoji:active{ transform: translateY(1px) scale(.98); }
+  #secretEmoji:focus-visible{ outline:none; box-shadow:var(--focus); }
+
+  .brand p{ margin:0; color:var(--muted); line-height:1.55; max-width:min(78ch, 100%); overflow-wrap:break-word; word-break:break-word; }
+
+  .pill{
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.06);
+    padding: 8px 12px;
+    border-radius:999px;
+    font-size: 12px;
+    font-weight:900;
+    color:var(--muted);
+    user-select:none;
+    white-space:nowrap;
+    max-width:100%;
+    min-width:0;
+  }
+
+  .banner{
+    display:none;
+    padding: clamp(8px, 2vw, 10px) clamp(10px, 2vw, 12px);
+    border-radius: clamp(10px, 2vw, 12px);
+    border:1px solid rgba(255,209,102,.35);
+    background:rgba(255,209,102,.12);
+    color:var(--text);
+    font-size: clamp(12px, 2.5vw, 13px);
+    box-shadow:var(--shadow);
+    margin:0 clamp(4px, 1vw, 6px);
+    min-width:0;
+    max-width:100%;
+  }
+  .banner.show{ display:block; }
+
+  .grid{ display:grid; grid-template-columns: 1fr; gap: clamp(12px, 2.5vw, 16px); min-width:0; width:100%; overflow:visible; }
+
+  .card{
+    background: linear-gradient(180deg, var(--card2), var(--card));
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    overflow: hidden;
+    min-width:0;
+    width:100%;
+    max-width:100%;
+  }
+  .head{
+    padding: clamp(12px, 2.5vw, 18px);
+    border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap: clamp(8px, 1.5vw, 12px);
+    min-width:0;
+    flex-wrap:wrap;
+  }
+  .head h2{ margin:0; font-size: clamp(15px, 3.5vw, 17px); letter-spacing:.01em; min-width:0; flex:1 1 auto; }
+
+  .content{ padding: clamp(12px, 2.5vw, 18px); display:flex; flex-direction:column; gap: clamp(12px, 2vw, 14px); box-sizing:border-box; min-width:0; overflow: visible; }
+
+  .row{ display:grid; grid-template-columns: 1fr; gap: clamp(10px, 2vw, 12px); min-width:0; }
+  .row > *{ min-width:0; width:100%; }
+
+  label{ display:block; color:var(--muted); font-size: clamp(12px, 2.5vw, 13px); margin:0 0 6px; font-weight:900; }
+
+  input,select,textarea{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    min-height: clamp(44px, 12vw, 48px);
+    padding: clamp(10px, 2.5vw, 12px);
+    border-radius: clamp(10px, 2vw, 12px);
+    border:1px solid rgba(255,255,255,.18);
+    background:rgba(0,0,0,.22);
+    color:var(--text);
+    outline:none;
+    transition: box-shadow .15s ease, border-color .15s ease;
+    font-size: max(16px, 1em);
+    font-family:inherit;
+    box-sizing:border-box;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  @media (prefers-color-scheme: light){
+    input,select,textarea{
+      background:rgba(255,255,255,.88);
+      border-color:rgba(15,23,42,.20);
+      color: var(--text);
+    }
+    select{
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23334155' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+    }
+  }
+  input:focus-visible,select:focus-visible,textarea:focus-visible{
+    border-color: rgba(255,59,107,.65);
+    box-shadow: var(--focus);
+  }
+  select{
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23a9b7d1' d='M6 8L2 4h8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+
+  textarea{ min-height: clamp(80px, 22vw, 96px); resize: vertical; }
+
+  .hint{ color:var(--muted); font-size: clamp(11px, 2.2vw, 12px); line-height:1.35; margin-top:6px; }
+
+  button{
+    width:100%;
+    min-height: clamp(44px, 12vw, 48px);
+    padding: clamp(10px, 2.5vw, 12px) clamp(12px, 2.5vw, 14px);
+    border-radius: clamp(10px, 2vw, 12px);
+    border:0;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color:white;
+    font-weight:950;
+    font-size: clamp(14px, 3.5vw, 15px);
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap: clamp(8px, 2vw, 10px);
+    transition: transform .08s ease, filter .2s ease, opacity .2s ease;
+    touch-action: manipulation;
+    box-sizing:border-box;
+    min-width:0;
+  }
+  button[style*="width:auto"],
+  button[style*="width: auto"]{
+    width: 100%;
+    max-width: 100%;
+  }
+  button:hover:not(:disabled){ filter:brightness(1.06); }
+  button:active:not(:disabled){ transform: translateY(1px); }
+  button:disabled{ opacity:.66; cursor:not-allowed; }
+
+  .secondary{ background: rgba(255,255,255,.10); border:1px solid var(--line); color:var(--text); font-weight:900; }
+  @media (prefers-color-scheme: light){
+    .secondary{ background: rgba(15,23,42,.06); }
+  }
+  .ghost{ background: transparent; border:1px solid var(--line); color:var(--text); font-weight:900; }
+  .danger{ background: rgba(255,92,92,.14); border:1px solid rgba(255,92,92,.35); color:#ffd7d7; font-weight:950; }
+
+  .status{
+    border:1px solid var(--line);
+    background: rgba(0,0,0,.12);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height:1.35;
+    display:none;
+    margin-top: 10px;
+  }
+  @media (prefers-color-scheme: light){
+    .status{ background: rgba(15,23,42,.04); }
+  }
+  .status.show{ display:block; }
+  .status.ok{ border-color: rgba(65,209,143,.35); }
+  .status.bad{ border-color: rgba(255,92,92,.40); }
+  .status.warn{ border-color: rgba(255,209,102,.45); }
+
+  .resultShareBtn{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    min-height: clamp(44px, 12vw, 48px);
+    margin-top: clamp(6px, 1.5vw, 8px);
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap: clamp(6px, 1.5vw, 8px);
+    box-sizing:border-box;
+  }
+
+  .kbd{
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 2px 7px;
+    border:1px solid var(--line);
+    border-radius: 8px;
+    background: rgba(0,0,0,.14);
+    color: var(--text);
+    user-select:none;
+    white-space:nowrap;
+  }
+  @media (prefers-color-scheme: light){
+    .kbd{ background: rgba(15,23,42,.06); }
+  }
+
+  .codeCard{
+    border:1px solid rgba(255,255,255,.18);
+    border-radius: clamp(12px, 2.5vw, 16px);
+    background: rgba(0,0,0,.14);
+    padding: clamp(10px, 2vw, 14px);
+    display:grid;
+    gap: clamp(8px, 1.5vw, 10px);
+  }
+  @media (prefers-color-scheme: light){
+    .codeCard{ background: rgba(255,255,255,.72); border-color: rgba(15,23,42,.16); }
+  }
+
+  .offerList{ display:grid; gap:10px; }
+  .offerItem{
+    border:1px solid var(--line);
+    border-radius: clamp(12px, 2vw, 14px);
+    padding: clamp(10px, 2vw, 12px);
+    background: rgba(0,0,0,.10);
+    display:grid;
+    gap: clamp(6px, 1vw, 8px);
+  }
+  @media (prefers-color-scheme: light){
+    .offerItem{ background: rgba(255,255,255,.60); }
+  }
+  .offerTop{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+  .offerTitle{ font-weight:950; }
+  .offerMeta{ color:var(--muted); font-size: clamp(11px, 2.2vw, 12px); line-height:1.35; overflow-wrap:break-word; word-break:break-word; }
+  .offerPickRow{ display:flex; gap: clamp(8px, 1.5vw, 10px); flex-wrap:wrap; align-items:center; justify-content:space-between; }
+  .offerBtn{ width:100%; min-width: 0; max-width: 100%; }
+
+  .resultWrap{ display:none; gap:12px; width:100%; max-width:100%; min-width:0; overflow:hidden; }
+  .resultWrap.show{ display:grid; }
+  #codeCard{ width:100%; max-width:100%; overflow-wrap:break-word; min-width:0; overflow:hidden; }
+
+  .codeLine{ display:flex; flex-direction:column; align-items:stretch; gap: clamp(8px, 2vw, 10px); min-width:0; }
+  .codeLine .secondary{ width: 100%; min-width: 0; }
+  .code{
+    font-family: var(--mono);
+    font-size: clamp(15px, 4vw, 18px);
+    letter-spacing: .06em;
+    font-weight: 950;
+    display:flex; align-items:center; gap: clamp(6px, 1.5vw, 10px);
+    flex-wrap:wrap;
+    min-width:0;
+    word-break:break-all;
+  }
+  .tag{
+    font-size: 12px;
+    font-weight: 950;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,.06);
+    color: var(--muted);
+    user-select:none;
+  }
+  @media (prefers-color-scheme: light){
+    .tag{ background: rgba(15,23,42,.06); }
+  }
+
+  .qrRow{
+    display:flex;
+    flex-direction:column;
+    gap: clamp(10px, 2vw, 14px);
+    align-items:stretch;
+    min-width:0;
+  }
+  #codeCard .qrRow qr-generator{ --s: min(180px, 50vw) !important; max-width: 100%; }
+  .qrRow .resultInfoCol{
+    width:100%;
+    min-width:0;
+    max-width:100%;
+    display:grid;
+    gap:10px;
+    overflow:visible;
+  }
+  .qrRow > div:first-child{
+    align-self:flex-start;
+    max-width:100%;
+  }
+
+  footer{
+    padding: 0 clamp(4px, 1vw, 6px);
+    color: var(--muted);
+    font-size: clamp(11px, 2.2vw, 12px);
+    display:flex; align-items:center; justify-content:space-between;
+    gap: clamp(8px, 1.5vw, 10px);
+    flex-wrap:wrap;
+    min-width:0;
+    max-width:100%;
+  }
+  footer span{ overflow-wrap: break-word; word-break: break-word; min-width: 0; }
+
+  /* ========== Mobile: botão Compartilhar, textos e área de resultado ========== */
+  @media (max-width: 640px){
+    /* 1) Botão Compartilhar: 100% largura, área de toque 44px, sem vazar */
+    .qrRow .resultInfoCol{
+      min-width: 0;
+      max-width: 100%;
+      overflow: visible;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: stretch;
+    }
+    #btnShare.resultShareBtn,
+    .resultShareBtn{
+      width: 100% !important;
+      max-width: 100%;
+      min-width: 0;
+      min-height: 44px;
+      margin-top: 12px;
+      margin-left: 0;
+      margin-right: 0;
+      box-sizing: border-box;
+      padding-left: 14px;
+      padding-right: 14px;
+      flex-shrink: 0;
+    }
+
+    /* 2) Textos não sair da tela: quebra e contenção */
+    .offerMeta,
+    .resultInfoCol .offerMeta,
+    .resultInfoCol .kbd,
+    #offerChosen,
+    #expiryText,
+    #phonePretty,
+    #codeCard .offerMeta,
+    .code,
+    .head h2,
+    .brand p,
+    footer span,
+    .content strong{
+      max-width: 100%;
+      min-width: 0;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      box-sizing: border-box;
+    }
+    .pill{
+      max-width: 100%;
+      min-width: 0;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      white-space: normal;
+    }
+    .code{ word-break: break-all; }
+    .kbd{ max-width: 100%; word-break: break-word; white-space: normal; }
+
+    /* 3) Área de resultado: coluna, QR + infos empilhados, botão visível */
+    .resultWrap{
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      overflow: hidden;
+      min-width: 0;
+      width: 100%;
+      max-width: 100%;
+    }
+    .resultWrap.show{ display: grid; }
+    #codeCard{
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      padding: clamp(10px, 3vw, 14px);
+    }
+    .qrRow{
+      flex-direction: column;
+      align-items: stretch;
+      min-width: 0;
+      gap: 12px;
+    }
+    .qrRow > div:first-child{
+      align-self: center;
+      max-width: 100%;
+      min-width: 0;
+    }
+    .qrRow .resultInfoCol{
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+    }
+  }
+
+  /* Telas muito estreitas: área de resultado sem padding extra que cause vazamento */
+  @media (max-width: 480px){
+    .resultWrap{ padding: 0; }
+    #codeCard{ padding: clamp(8px, 2vw, 12px); }
+    .qrRow .resultInfoCol{ padding: 0; }
+    #btnShare.resultShareBtn,
+    .resultShareBtn{ margin-left: 0; margin-right: 0; }
+  }
+
+  /* Tablet: 2 colunas no formulário (nome | telefone) e botão “Escolher” ao lado */
+  @media (min-width: 640px){
+    body{ padding: 14px 12px; padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }
+    .wrap{ max-width: 100%; gap: 16px; }
+    .row{ grid-template-columns: 1fr 1fr; }
+    .row > *{ width: auto; }
+    .offerBtn{ width: auto; min-width: 140px; }
+    button[style*="width:auto"],
+    button[style*="width: auto"]{ width: auto; max-width: 100%; }
+    .codeLine{ flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .codeLine .secondary{ width: auto; min-width: 120px; }
+    #codeCard .qrRow qr-generator{ --s: 200px !important; }
+  }
+
+  /* Desktop: 2 colunas (conteúdo | lateral), mais espaço */
+  @media (min-width: 920px){
+    body{ padding: 20px 14px; }
+    .wrap{ max-width: min(1120px, 100vw); padding: 0 2px; gap: 18px; }
+    .grid{ grid-template-columns: 1.05fr .95fr; gap: 16px; }
+    .content{ padding: 18px; gap: 14px; }
+    .head{ padding: 18px 18px 14px; }
+    .head h2{ font-size: 16px; }
+    h1{ font-size: 22px; }
+    .row{ gap: 12px; }
+    input, select, textarea{ min-height: 48px; padding: 12px; }
+    button{ min-height: 48px; padding: 12px 14px; font-size: 15px; }
+    .code{ font-size: 18px; }
+    #codeCard .qrRow qr-generator{ --s: 220px !important; }
+  }
+
+  /* Celular muito estreito: ajuste extra */
+  @media (max-width: 360px){
+    body{ padding: 8px 6px; padding-left: max(6px, env(safe-area-inset-left)); padding-right: max(6px, env(safe-area-inset-right)); }
+    .wrap{ gap: 10px; }
+    .content{ padding: 10px 8px; gap: 8px; }
+    .head{ padding: 8px; }
+    input, select, textarea{ padding: 8px 10px; min-height: 42px; }
+    button{ padding: 8px 10px; min-height: 42px; font-size: 13px; }
+    .codeCard{ padding: 8px 6px; }
+    h1{ font-size: 17px; }
+  }
+
+  .srOnly{
+    position:absolute!important;
+    width:1px;height:1px;
+    padding:0;margin:-1px;
+    overflow:hidden;clip:rect(0,0,0,0);
+    white-space:nowrap;border:0;
+  }
+
+  /* (admin modal styles + scroll fix) continuam na PARTE 2 */
+    /* ============================================================
+     ADMIN MODAL: rolagem corrigida (mobile + desktop)
+     - O overlay NÃO rola: quem rola é o "admScroll"
+     - Suporte a iOS: -webkit-overflow-scrolling
+     - Evita travar o body: body.locked { overflow:hidden }
+     ============================================================ */
+
+  body.locked{
+    overflow:hidden;
+    touch-action:none;
+  }
+  html:has(body.locked){ overflow: hidden; }
+
+  #admModal{
+    position:fixed;
+    inset:0;
+    z-index:10000;
+    display:grid;
+    place-items:center;
+    padding:16px;
+    background:var(--sheetBg);
+    backdrop-filter: blur(12px);
+  }
+
+  #admBox{
+    width:min(1080px,100%);
+    max-height: min(90dvh, 90vh);
+    display:grid;
+    grid-template-rows: auto 1fr;
+    overflow:hidden;
+    border-radius:18px;
+    border:1px solid var(--admLine);
+    background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+    box-shadow: var(--shadow);
+    color: var(--admText);
+  }
+
+  /* Área que rola de verdade */
+  #admScroll{
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding:14px;
+  }
+
+  /* Mobile: modal vira “sheet” embaixo e rola perfeito */
+  @media (max-width: 768px){
+    #admModal{ padding: 12px; }
+    #admScroll{ padding: 12px; }
+  }
+  @media (max-width: 720px){
+    #admModal{ place-items:end center; padding: 10px 10px 0; }
+    #admBox{
+      border-radius:18px 18px 0 0;
+      max-height: min(92dvh, 92vh);
+    }
+  }
+  @media (max-width: 480px){
+    #admModal{ padding: 8px 6px 0; padding-left: max(6px, env(safe-area-inset-left)); padding-right: max(6px, env(safe-area-inset-right)); }
+    #admScroll{ padding: 10px 8px; }
+    .admTopBar{ padding: 10px 12px; flex-wrap: wrap; gap: 8px; }
+    .admGrid2{ gap: 10px; }
+  }
+  @media (max-width: 360px){
+    #admScroll{ padding: 8px 6px; }
+    .admTopBar{ padding: 8px 10px; }
+  }
+
+  .admTopBar{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:14px;
+    border-bottom:1px solid var(--admLine);
+  }
+
+  .admTabs{ display:flex; gap:8px; flex-wrap:wrap; }
+
+  .admTableWrap{
+    overflow:auto;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background: rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme: light){
+    .admTableWrap{ background: rgba(255,255,255,.70); }
+  }
+
+  .admGrid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width: 760px){ .admGrid2{ grid-template-columns:1fr; } }
+
+  .tiny{ color: var(--muted); font-size:12px; line-height:1.35; }
+  hr{ border:0; border-top:1px solid var(--line); opacity:.8; margin:12px 0; }
