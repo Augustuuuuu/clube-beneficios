@@ -689,7 +689,7 @@ class Controller{
         <div class="offerTop">
           <div>
             <div class="offerTitle">${U.esc(o.title)}</div>
-            <div class="offerMeta">${U.esc(o.description||"")}</div>
+            <div class="offerMeta offerDescription">${U.esc(o.description||"")}</div>
             <div class="offerMeta">Janela: <span class="kbd">${U.esc(U.fmtDT(o.startAt))}</span> → <span class="kbd">${U.esc(U.fmtDT(o.endAt))}</span></div>
           </div>
           <div class="tag">${U.esc(o.tag||"OFERTA")}</div>

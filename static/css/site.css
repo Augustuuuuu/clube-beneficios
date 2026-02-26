@@ -307,6 +307,7 @@
   .offerTop{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap; }
   .offerTitle{ font-weight:950; }
   .offerMeta{ color:var(--muted); font-size: clamp(11px, 2.2vw, 12px); line-height:1.35; overflow-wrap:break-word; word-break:break-word; }
+  .offerDescription{ white-space: pre-line; }
   .offerPickRow{ display:flex; gap: clamp(8px, 1.5vw, 10px); flex-wrap:wrap; align-items:center; justify-content:space-between; }
   .offerBtn{ width:100%; min-width: 0; max-width: 100%; }
 
