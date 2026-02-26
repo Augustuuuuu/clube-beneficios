@@ -235,34 +235,15 @@
   .status.bad{ border-color: rgba(255,92,92,.40); }
   .status.warn{ border-color: rgba(255,209,102,.45); }
 
-  .resultActions{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-    align-items:stretch;
-  }
-  .resultActions button{
+  .resultShareBtn{
+    width:100%;
+    max-width:100%;
+    min-height:44px;
+    margin-top:8px;
     display:inline-flex;
     align-items:center;
     justify-content:center;
     gap:8px;
-    min-height:44px;
-    width:100%;
-  }
-  .resultActionsFull{
-    width:100%;
-    max-width:100%;
-    min-width:0;
-    grid-template-columns:1fr 1fr;
-    gap:10px;
-    overflow:visible;
-  }
-  .resultActionsFull button{
-    min-width:0;
-    width:100%;
-  }
-  @media (max-width: 520px){
-    .resultActionsFull{ grid-template-columns:1fr; }
   }
 
   .kbd{
@@ -553,10 +534,7 @@
                   <div class="offerMeta"><strong>Validade:</strong> <span id="expiryText" class="kbd">—</span></div>
                   <div class="offerMeta"><strong>WhatsApp:</strong> <span id="phonePretty" class="kbd">—</span></div>
 
-                  <div class="resultActions resultActionsFull">
-                    <button id="btnShare" class="ghost" type="button"><span aria-hidden="true">📤</span> Compartilhar</button>
-                    <button id="btnWhats" class="ghost" type="button"><span aria-hidden="true">🟢</span> Partilhar no WhatsApp</button>
-                  </div>
+                  <button id="btnShare" class="ghost resultShareBtn" type="button"><span aria-hidden="true">📤</span> Compartilhar (WhatsApp, etc.)</button>
 
                   <div id="missionBox" class="codeCard" style="display:none;">
                     <strong style="font-size:14px;">Missão bônus 🎯</strong>
@@ -2037,13 +2015,6 @@ class Controller{
     }
   }
 
-  whats(){
-    const code = document.getElementById("codeValue")?.textContent || "";
-    if(!code || code.includes("…")) return U.toast("Gere um código primeiro.","warn");
-    const msg=encodeURIComponent(`Meu código do Clube de Benefícios Oficial: ${code}`);
-    window.open(`https://wa.me/?text=${msg}`,"_blank","noopener,noreferrer");
-  }
-
   /* ---------------------------
      Wire UI
      --------------------------- */
@@ -2097,7 +2068,6 @@ class Controller{
     if(t.id==="btnGerar") return this.generate();
     if(t.id==="btnCopy") return this.copyCode();
     if(t.id==="btnShare") return this.share();
-    if(t.id==="btnWhats") return this.whats();
     if(t.id==="btnApplyTheme") return this.applyThemeFromUI();
 
     // Admin actions (na PARTE 5)
@@ -3030,7 +3000,6 @@ Controller.prototype.adminChangeGerentePass = async function(){
     if(t.id==="btnGerar") return this.generate();
     if(t.id==="btnCopy") return this.copyCode();
     if(t.id==="btnShare") return this.share();
-    if(t.id==="btnWhats") return this.whats();
     if(t.id==="btnApplyTheme") return this.applyThemeFromUI();
 
     return orig.call(this,e);
