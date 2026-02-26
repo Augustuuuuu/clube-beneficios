@@ -973,9 +973,11 @@ const CFG = Object.freeze({
       ttlMs: 2 * 60 * 60 * 1000,
       antiDup: true,
       termsText:
-        "• 1 código por WhatsApp (por oferta) dentro da validade.\n" +
-        "• O benefício pode variar conforme oferta ativa.\n" +
-        "• Dados ficam neste dispositivo (modo offline).",
+        "• Um código por WhatsApp (por oferta) dentro do prazo de validade.\n" +
+        "• O benefício depende da oferta escolhida.\n" +
+        "• Apresente o QR ou o código no balcão para liberar o benefício.\n" +
+        "• Em caso de dúvida, consulte o estabelecimento.\n" +
+        "• Dados podem ser sincronizados com o servidor quando online.",
       missionText:
         "Mostre este QR no balcão e peça para validar. Se postar no Instagram e marcar o perfil, ganha um extra surpresa."
     },
@@ -1472,7 +1474,9 @@ class Controller{
   async renderTermsPreview(){
     const el=document.getElementById("termsPreview");
     const c = this.serverData.campaign || await this.m.getCampaign();
-    el.innerHTML = U.esc(c.termsText||"").replace(/\n/g,"<br>");
+    const raw = (c.termsText||"").trim();
+    const text = raw || "• Um código por WhatsApp (por oferta) dentro do prazo de validade.\n• O benefício depende da oferta escolhida.\n• Apresente o QR ou o código no balcão para liberar o benefício.\n• Em caso de dúvida, consulte o estabelecimento.";
+    el.innerHTML = U.esc(text).replace(/\n/g,"<br>");
   }
 
   /* ---------------------------
@@ -1553,7 +1557,8 @@ class Controller{
   }
 
   pickOffer(offerId){
-    this.selectedOfferId = offerId;
+    const id = offerId;
+    this.selectedOfferId = /^\d+$/.test(String(id)) ? Number(id) : id;
     const btn = document.getElementById("btnGerar");
     btn.disabled = false;
     document.getElementById("btnIcon").textContent = "✨";
@@ -1640,7 +1645,7 @@ class Controller{
     if(!phone){ this.status("bad","WhatsApp inválido. Use DDD válido.", true); phoneEl.focus(); return U.toast("WhatsApp inválido.","bad"); }
 
     const offers = this.serverData.offers?.length ? this.serverData.offers : await this.m.getOffers();
-    const offer = offers.find(o=>o.id===this.selectedOfferId);
+    const offer = offers.find(o=>String(o.id)===String(this.selectedOfferId));
     if(!offer || !this.offerActive(offer, Date.now())){
       await this.renderOffers();
       this.status("warn","Oferta não está mais ativa. Escolha outra.", true);
