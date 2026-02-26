@@ -954,8 +954,8 @@ const CFG = Object.freeze({
 
   pbkdf2: { iter: 150000, hash:"SHA-256", baseSalt:"cbo_base_salt_2026_v5", pepper:"pepper::cbo::v5" },
 
-  maxFails: 5,
-  lockMs: 10 * 60 * 1000,
+  maxFails: 10,
+  lockMs: 1 * 60 * 1000,
   sessionMs: 25 * 60 * 1000,
 
   validDDD: new Set([11,12,13,14,15,16,17,18,19,21,22,24,27,28,31,32,33,34,35,37,38,41,42,43,44,45,46,47,48,49,51,53,54,55,61,62,63,64,65,66,67,68,69,71,73,74,75,77,79,81,82,83,84,85,86,87,88,89,91,92,93,94,95,96,97,98,99]),
@@ -1883,7 +1883,7 @@ class Controller{
   }
 
   /* =========================
-     Admin stealth trigger
+     Admin: 7 toques no ícone 🎁 abre o painel de login
      ========================= */
   secretTap(){
     const now=performance.now();
@@ -1896,13 +1896,15 @@ class Controller{
     }
   }
 
+  /* Senhas padrão: admin = "Admin123", gerente = "gerente123".
+     Verificadores ficam em IndexedDB (meta "roleVerifiers"). */
   async ensureAuthSetup(){
     const stored = await this.m.getMeta("roleVerifiers");
     if(stored && stored.admin && stored.gerente){
       this.admin.storedVerifiers = stored;
       return;
     }
-    const adminV = await CryptoAuth.deriveVerifier("admin123");
+    const adminV = await CryptoAuth.deriveVerifier("Admin123");
     const gerenteV = await CryptoAuth.deriveVerifier("gerente123");
     const roleVerifiers = { admin: adminV, gerente: gerenteV };
     await this.m.setMeta("roleVerifiers", roleVerifiers);
