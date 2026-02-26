@@ -56,7 +56,14 @@
   }
 
   *{ box-sizing:border-box; }
-  html{ overflow-x:hidden; -webkit-text-size-adjust: 100%; min-height: 100%; width: 100%; }
+  /* Uma única rolagem: só o documento (navegador). Nenhum elemento da tela principal cria barra. */
+  html{
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-text-size-adjust: 100%;
+    min-height: 100%;
+    width: 100%;
+  }
   body{
     margin:0;
     min-height: 100%;
@@ -73,11 +80,12 @@
     flex-direction:column;
     align-items:center;
     padding: 20px 14px;
-    overflow-x:hidden;
+    overflow-x: hidden !important;
+    overflow-y: visible !important;
     box-sizing:border-box;
   }
 
-  .wrap{ width:100%; max-width:min(1120px, 100vw); display:grid; gap:18px; box-sizing:border-box; min-width:0; padding:0 2px; overflow-x:hidden; overflow-y:visible; }
+  .wrap{ width:100%; max-width:min(1120px, 100vw); display:grid; gap:18px; box-sizing:border-box; min-width:0; padding:0 2px; overflow: visible; }
   header{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:0 6px; min-width:0; flex-wrap:wrap; }
   .brand{ display:flex; flex-direction:column; gap:10px; min-width:0; flex:1; }
   .titleRow{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; min-width:0; }
@@ -133,7 +141,7 @@
     border:1px solid var(--line);
     border-radius:var(--radius);
     box-shadow:var(--shadow);
-    overflow:hidden;
+    overflow: hidden;
     min-width:0;
     width:100%;
     max-width:100%;
@@ -146,7 +154,7 @@
   }
   .head h2{ margin:0; font-size: 16px; letter-spacing:.01em; min-width:0; }
 
-  .content{ padding: 18px; display:flex; flex-direction:column; gap: 14px; box-sizing:border-box; min-width:0; overflow-x:hidden; overflow-y:visible; }
+  .content{ padding: 18px; display:flex; flex-direction:column; gap: 14px; box-sizing:border-box; min-width:0; overflow: visible; }
 
   .row{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; min-width:0; }
   .row > *{ min-width:0; }
@@ -365,13 +373,13 @@
 
   /* ========== Só responsivo para celular ========== */
   @media (max-width: 600px){
-    .wrap{ width: 100%; max-width: 100%; overflow-x: hidden; padding: 0; gap: 14px; }
+    .wrap{ width: 100%; max-width: 100%; overflow: visible; padding: 0; gap: 14px; }
     body{ padding: 12px 10px; padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right)); padding-bottom: max(12px, env(safe-area-inset-bottom)); }
     header{ padding: 0 4px; }
     h1{ font-size: 20px; }
     .grid{ grid-template-columns: 1fr; gap: 12px; }
     .card, .content, .row > *, #codeCard, .resultWrap, .codeLine, .qrRow, .resultInfoCol{ min-width: 0; max-width: 100%; }
-    .content{ padding: 14px 12px; gap: 12px; overflow-x: hidden; }
+    .content{ padding: 14px 12px; gap: 12px; overflow: visible; }
     .head{ padding: 12px 12px; }
     .head h2{ font-size: 15px; }
     .row{ grid-template-columns: 1fr; gap: 10px; }
